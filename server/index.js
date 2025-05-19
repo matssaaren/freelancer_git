@@ -2,8 +2,23 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
 const mysql = require('mysql2/promise');
+
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+require('dotenv').config();
+const JWT_SECRET = process.env.JWT_SECRET;
+
+const app = express();
+const PORT = 5000;
+
+app.use(cors());
+app.use(express.json());
+
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs'); // for file deleting
 
 const db = mysql.createPool({
   host: 'localhost',
@@ -12,12 +27,9 @@ const db = mysql.createPool({
   database: 'freelancehub',
 });
 
-require('dotenv').config();
-const JWT_SECRET = process.env.JWT_SECRET;
-
 function authenticateToken(req, res, next) {
   const authHeader = req.headers.authorization;
-
+  
   if (!authHeader) return res.status(401).json({ error: 'No token provided' });
 
   const token = authHeader.split(' ')[1]; // "Bearer <token>"
@@ -30,17 +42,6 @@ function authenticateToken(req, res, next) {
     return res.status(403).json({ error: 'Invalid or expired token' });
   }
 }
-
-const app = express();
-const PORT = 5000;
-
-app.use(cors());
-app.use(express.json());
-
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs'); // for file deleting
-
 // Setup storage for avatars
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -53,6 +54,25 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+// *Backend by Habnone
+// Download better comments plugin for VSCode
+
+// // TODO 1): Google login integration 
+// TODO 2): Job/profile categories 
+// TODO 3): Optional company info (hide if empty) 
+// TODO 4): Notifications tab 
+// TODO 5): Add ratings feature 
+// TODO 6): Comments functionality 
+// TODO 7): User chat functionality 
+// TODO 8): PRO features 
+
+// PRO Features TODO:
+// TODO: Subscription purchase flow (can use fake payment)
+// TODO: Display "PRO" status badge on profile
+// TODO: Allow pinned jobs (PRO accounts only)
+
+
+// client sectet = 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
 app.post('/upload-avatar', authenticateToken, upload.single('avatar'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
@@ -90,6 +110,65 @@ app.post('/upload-avatar', authenticateToken, upload.single('avatar'), async (re
 // Allow express to serve uploaded files
 app.use('/uploads', express.static('uploads'));
 
+app.post('/auth/google', async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) return res.status(400).json({ error: 'Token missing' });
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, given_name, family_name, picture } = payload;
+
+    // Check if user exists
+    const [existing] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+
+    let user;
+
+    if (existing.length === 0) {
+      // Insert new user
+      const [result] = await db.query(
+        'INSERT INTO users (first_name, last_name, email, avatar) VALUES (?, ?, ?, ?)',
+        [given_name, family_name, email, picture]
+      );
+
+      user = {
+        id: result.insertId,
+        first_name: given_name,
+        last_name: family_name,
+        email,
+        avatar: picture,
+        role: null,
+      };
+    } else {
+      user = existing[0];
+    }
+
+    const tokenPayload = { id: user.id, email: user.email };
+    const authToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+      expiresIn: '7d',
+    });
+
+    res.json({
+      token: authToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        avatar: user.avatar,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    console.error('Google login error:', err);
+    res.status(401).json({ error: 'Invalid Google token' });
+  }
+});
 
 // Middleware to authenticate token
 function authenticateToken(req, res, next) {
@@ -265,7 +344,7 @@ app.get('/profile/:username', async (req, res) => {
 });
 
 app.post('/create-post', authenticateToken, async (req, res) => {
-  const { title, description, price } = req.body;
+  const { title, description, category } = req.body;
   const userId = req.user.id; // from the token
 
   if (!title || !description) {
@@ -274,8 +353,8 @@ app.post('/create-post', authenticateToken, async (req, res) => {
 
   try {
     await db.query(
-      'INSERT INTO Posts (user_id, title, description, upload_date) VALUES (?, ?, ?, CURRENT_DATE)',
-      [userId, title, description]
+      'INSERT INTO Posts (user_id, title, description, category, upload_date) VALUES (?, ?, ?, ?, CURRENT_DATE)',
+      [userId, title, description, category]
     );
 
     res.status(201).json({ message: 'Post created successfully.' });
@@ -320,6 +399,7 @@ app.get('/posts/user/:username', async (req, res) => {
         p.title,
         p.description,
         p.upload_date,
+        p.category,
         u.first_name,
         u.last_name,
         u.avatar

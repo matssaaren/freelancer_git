@@ -1,6 +1,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import './Profile.css'; // Reuse your profile styles!
+import JobPost from '../components/JobPost';
 
 
 
@@ -74,44 +75,12 @@ function PublicProfile() {
       {/* Posts Section */}
       <div className="posts-section">
         <h3>My Posts</h3>
-        {posts.length > 0 ? (
-          <div className="post-list">
-            {posts.map((post) => {
-              const shortName = `${post.first_name.charAt(0)}. ${post.last_name}`;
-              const usernameURL = `${post.first_name}-${post.last_name}`;
-              return (
-                <div key={post.post_id} className="post-card">
-                  <h4>{post.title}</h4>
-
-                  <div className="job-user-info">
-                    <img
-                      src={
-                        post.avatar
-                          ? post.avatar.startsWith('http')
-                            ? post.avatar
-                            : `http://localhost:5000/${post.avatar}`
-                          : 'https://placehold.co/50x50/png'
-                      }
-                      alt="User Avatar"
-                      className="job-user-avatar"
-                    />
-                    <Link to={`/profile/${usernameURL}`} className="job-user-name">
-                      {shortName}
-                    </Link>
-                  </div>
-
-                  <p>{post.description.length > 100 ? post.description.slice(0, 100) + '...' : post.description}</p>
-                  <p><strong>Date:</strong> {new Date(post.upload_date).toLocaleDateString()}</p>
-                  <Link to={`/posts/${post.post_id}`} className="view-job-link">
-                    View Details
-                  </Link>
-                </div>
-              );
-            })}
+        {posts.map((post, index) => (
+          <div key={post.post_id} style={{ '--i': `${index * 0.1}s` }}>
+            <JobPost post={post} user={user} />
           </div>
-        ) : (
-          <p>No posts available.</p>
-        )}
+        ))}
+
       </div>
     </div>
   </div>

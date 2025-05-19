@@ -10,7 +10,9 @@ function CreatePost() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
-
+  const [category, setCategory] = useState('');
+  const categories = ['Web Development', 'Design', 'Marketing', 'Writing', 'Video Editing'];
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -28,7 +30,7 @@ function CreatePost() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ title, description }),
+        body: JSON.stringify({ title, description, category }),
       });
 
       const data = await res.json();
@@ -78,6 +80,15 @@ function CreatePost() {
     </div>
 
     {error && <p className="form-error">{error}</p>}
+    <div className="form-section">
+      <label htmlFor="category">Category:</label>
+      <select id="category" value={category} onChange={(e) => setCategory(e.target.value)} required>
+        <option value="">Select a category</option>
+        {categories.map((cat) => (
+          <option key={cat} value={cat}>{cat}</option>
+        ))}
+      </select>
+    </div>
 
     <button type="submit" className="submit-btn">Create Post</button>
   </form>

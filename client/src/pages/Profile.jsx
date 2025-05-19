@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Profile.css';
+import JobPost from '../components/JobPost';
 
 function Profile() {
   const { user, loading } = useAuth();
@@ -50,9 +51,11 @@ function Profile() {
             className="avatar"
           />
           <h2>{user.name}</h2>
-          <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>Phone:</strong> {user.phone || 'Not set'}</p>
-          <p><strong>Date of Birth:</strong> {user.dob ? new Date(user.dob).toLocaleDateString() : 'Not set'}</p>
+          
+          {user.email && <p><strong>Email:</strong> {user.email}</p>}
+          {user.phone && <p><strong>Email:</strong> {user.phone}</p>}
+          {user.dob && <p><strong>Date of Birth:</strong> {new Date(user.dob).toLocaleDateString()}</p>}
+          
           <p><strong>Bio:</strong> {user.bio || 'No bio yet'}</p>
 
           <div className="profile-actions">
@@ -64,24 +67,12 @@ function Profile() {
         {/* Posts Section */}
         <div className="posts-section">
           <h3>My Posts</h3>
-          {myPosts.length > 0 ? (
-            <div className="post-scroll-wrapper">
-              <div className="post-list">
-                {myPosts.map((post) => (
-                  <div key={post.post_id} className="post-card">
-                    <h4>{post.title}</h4>
-                    <p>{post.description.length > 100 ? post.description.slice(0, 100) + '...' : post.description}</p>
-                    <p><strong>Posted:</strong> {new Date(post.upload_date).toLocaleDateString()}</p>
-                    <Link to={`/posts/${post.post_id}`} className="view-job-link">
-                      View Post
-                    </Link>
-                  </div>
-                ))}
-              </div>
+          {myPosts.map((post, index) => (
+            <div key={post.post_id} style={{ '--i': `${index * 0.1}s` }}>
+              <JobPost post={post} user={user} />
             </div>
-          ) : (
-            <p>You haven't created any posts yet.</p>
-          )}
+          ))}
+
         </div>
         
       </div>

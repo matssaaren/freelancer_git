@@ -49,27 +49,38 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const login = async (email, password) => {
+  const login = async (emailOrData, password) => {
     try {
-      const res = await fetch('http://localhost:5000/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Login failed');
+      let token;
+  
+      if (typeof emailOrData === 'object' && emailOrData.token) {
+        // Google login
+        token = emailOrData.token;
+      } else {
+        // Email/password login
+        const res = await fetch('http://localhost:5000/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailOrData, password }),
+        });
+  
+        const data = await res.json();
+  
+        if (!res.ok) {
+          throw new Error(data.error || 'Login failed');
+        }
+  
+        token = data.token;
       }
-
-      localStorage.setItem('token', data.token);
-      await fetchUserInfo(data.token);
+  
+      localStorage.setItem('token', token);
+      await fetchUserInfo(token);
       navigate('/profile');
     } catch (error) {
       throw error;
     }
   };
+  
 
   const logout = () => {
     localStorage.removeItem('token');

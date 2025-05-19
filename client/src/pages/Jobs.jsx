@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import JobPost from '../components/JobPost';
+
 import './Jobs.css';
 
 function Jobs() {
@@ -9,7 +11,9 @@ function Jobs() {
   const [loading, setLoading] = useState(true);
   const [allPosts, setAllPosts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const categories = ['All', 'Web Development', 'Design', 'Marketing', 'Writing', 'Video Editing'];
+  
 
   useEffect(() => {
     async function fetchPosts() {
@@ -43,94 +47,64 @@ function Jobs() {
 
     {/* Search and Filters */}
     <div className="job-search-bar">
-  <input
-    type="text"
-    placeholder="Search jobs..."
-    value={searchTerm}
-    onChange={(e) => {
-      const term = e.target.value;
-      setSearchTerm(term);
+    <input
+      type="text"
+      placeholder="Search jobs..."
+      value={searchTerm}
+      onChange={(e) => {
+        const term = e.target.value;
+        setSearchTerm(term);
 
-      if (term === '') {
-        setPosts(allPosts); // Reset if empty
-        return;
+        if (term === '') {
+          setPosts(allPosts); // Reset if empty
+          return;
+        }
+
+        const filtered = allPosts.filter((post) => {
+          const fullName = `${post.first_name} ${post.last_name}`.toLowerCase();
+          return (
+            post.title.toLowerCase().includes(term.toLowerCase()) ||
+            post.description.toLowerCase().includes(term.toLowerCase()) ||
+            fullName.includes(term.toLowerCase())
+          );
+        });
+
+        setPosts(filtered);
+      }}
+    />
+    {searchTerm && (
+      <button className="clear-search-btn" onClick={() => {
+        setSearchTerm('');
+        setPosts(allPosts);
+      }}>
+        ✕
+      </button>
+    )}
+    <select value={selectedCategory} onChange={(e) => {
+      const value = e.target.value;
+      setSelectedCategory(value);
+      if (value === 'All') {
+        setPosts(allPosts);
+      } else {
+        setPosts(allPosts.filter(post => post.category === value));
       }
-
-      const filtered = allPosts.filter((post) => {
-        const fullName = `${post.first_name} ${post.last_name}`.toLowerCase();
-        return (
-          post.title.toLowerCase().includes(term.toLowerCase()) ||
-          post.description.toLowerCase().includes(term.toLowerCase()) ||
-          fullName.includes(term.toLowerCase())
-        );
-      });
-
-      setPosts(filtered);
-    }}
-  />
-  {searchTerm && (
-    <button className="clear-search-btn" onClick={() => {
-      setSearchTerm('');
-      setPosts(allPosts);
     }}>
-      ✕
-    </button>
-  )}
+      {categories.map((cat) => (
+        <option key={cat} value={cat}>{cat}</option>
+      ))}
+    </select>
+
 </div>
 
 
     {/* Scrollable Jobs Section */}
     <div className="jobs-scroll-container">
       <div className="jobs-list">
-        {posts.length > 0 ? (
-          posts.map((post, index) => {
-            const shortName = `${post.first_name.charAt(0)}. ${post.last_name}`;
-            let usernameURL = `${post.first_name}-${post.last_name}`;
-            if (user && post.user_id === user.id) usernameURL = '';
-
-            return (
-              <div
-                key={post.post_id}
-                className="job-card"
-                style={{ '--i': `${index * 0.1}s` }}
-              >
-                <div className="job-user-info">
-                  <img
-                    src={
-                      post.avatar
-                        ? post.avatar.startsWith('http')
-                          ? post.avatar
-                          : `http://localhost:5000/${post.avatar}`
-                        : 'https://placehold.co/50x50/png'
-                    }
-                    alt="User Avatar"
-                    className="job-user-avatar"
-                  />
-                  {usernameURL ? (
-                    <Link to={`/profile/${usernameURL}`} className="job-user-name">
-                      {shortName}
-                    </Link>
-                  ) : (
-                    <span className="job-user-name">{shortName}</span>
-                  )}
-                </div>
-
-                <h3>{post.title}</h3>
-                <p>
-                  {post.description.length > 100
-                    ? post.description.slice(0, 100) + '...'
-                    : post.description}
-                </p>
-                <p><strong>Date:</strong> {new Date(post.upload_date).toLocaleDateString()}</p>
-                <Link to={`/posts/${post.post_id}`} className="view-job-link">
-                  View Details
-                </Link>
-              </div>
-            );
-          })
-        ) : (
-          <p>No posts available.</p>
-        )}
+        {posts.map((post, index) => (
+          <div key={post.post_id} style={{ '--i': `${index * 0.1}s` }}>
+            <JobPost post={post} user={user} />
+          </div>
+        ))}
       </div>
     </div>
   </div>
